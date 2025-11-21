@@ -6,17 +6,35 @@ export default function Login(){
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [pin, setPin] = useState('');
+  const [error, setError] = useState(''); // new: inline error
   const navigate = useNavigate();
   const API = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
+  // simple email validator
+  function isValidEmail(v){
+    if (!v || typeof v !== 'string') return false;
+    // RFC-lite regex — good for client-side validation
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim());
+  }
+
   async function submit(e){
     e.preventDefault();
+    setError('');
+
+    // normalize email: trim + lowercase
+    const normalizedEmail = email.trim().toLowerCase();
+
+    // client-side email validation (added)
+    if (!isValidEmail(normalizedEmail)) {
+      setError('Please enter a valid email address.');
+      return;
+    }
 
     try {
       const res = await fetch(`${API}/api/auth/login`, {
         method: 'POST',
         headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({ email, password, pin })
+        body: JSON.stringify({ email: normalizedEmail, password, pin })
       });
 
       const data = await res.json();
@@ -148,6 +166,14 @@ export default function Login(){
           background: rgba(255,255,255,0.08);
         }
 
+        .error {
+          color: #ffb4b4;
+          background: rgba(255, 0, 0, 0.04);
+          padding: 8px 10px;
+          border-radius: 8px;
+          font-size: 13px;
+        }
+
         button {
           width: 100%;
           padding: 12px;
@@ -174,18 +200,32 @@ export default function Login(){
         <form onSubmit={submit}>
           <div>
             <label>Email</label><br/>
-            <input value={email} onChange={e=>setEmail(e.target.value)} required/>
+            <input
+              value={email}
+              onChange={e => { setEmail(e.target.value); if (error) setError(''); }}
+              required
+              inputMode="email"
+              autoComplete="email"
+            />
           </div>
 
           <div>
             <label>Password</label><br/>
-            <input type="password" value={password} onChange={e=>setPassword(e.target.value)} required/>
+            <input
+              type="password"
+              value={password}
+              onChange={e=>setPassword(e.target.value)}
+              required
+              autoComplete="current-password"
+            />
           </div>
 
           <div>
             <label>Camera Secret Key</label><br/>
             <input value={pin} onChange={e=>setPin(e.target.value)} required/>
           </div>
+
+          {error && <div className="error">{error}</div>}
 
           <button type="submit">Login</button>
         </form>

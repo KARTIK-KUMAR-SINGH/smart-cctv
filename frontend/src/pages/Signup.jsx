@@ -4,15 +4,31 @@ import { useNavigate } from 'react-router-dom';
 export default function Signup(){
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [error, setError] = useState(''); // <-- added
   const navigate = useNavigate();
   const API = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
+  // <-- added: email validator (minimal)
+  function isValidEmail(v){
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim());
+  }
+
   async function submit(e){
     e.preventDefault();
+    setError('');
+
+    const normalizedEmail = email.trim().toLowerCase();
+
+    // <-- added: email validation
+    if (!isValidEmail(normalizedEmail)) {
+      setError("Please enter a valid email.");
+      return;
+    }
+
     const res = await fetch(`${API}/api/auth/signup`, {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ email, password })
+      body: JSON.stringify({ email: normalizedEmail, password })
     });
     const data = await res.json();
 
@@ -124,6 +140,12 @@ export default function Signup(){
         button:active {
           transform: scale(0.98);
         }
+
+        .error { 
+          color:#ff7a7a;
+          font-size:13px;
+          margin-top:-10px;
+        }
       `}</style>
 
       <div className="signup-card">
@@ -132,8 +154,17 @@ export default function Signup(){
         <form onSubmit={submit}>
           <div>
             <label>Email</label><br/>
-            <input value={email} onChange={e=>setEmail(e.target.value)} required/>
+            <input 
+              value={email} 
+              onChange={e=>{
+                setEmail(e.target.value);
+                if (error) setError('');
+              }} 
+              required
+            />
           </div>
+
+          {error && <div className="error">{error}</div>}
 
           <div>
             <label>Password</label><br/>
