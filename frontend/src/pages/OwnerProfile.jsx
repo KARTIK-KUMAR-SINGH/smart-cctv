@@ -1,5 +1,3 @@
-// frontend/src/pages/OwnerProfile.jsx
-// frontend/src/pages/OwnerProfile.jsx
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
@@ -10,6 +8,7 @@ export default function OwnerProfile() {
   const [form, setForm] = useState({
     ownerName: '',
     ownerMobile: '',
+    ownerAddress: '',      // NEW: owner address field
     thresholdValue: '',
     securityContact: '',
     higherAuthority: '',
@@ -33,6 +32,7 @@ export default function OwnerProfile() {
           setForm({
             ownerName: data.ownerName || '',
             ownerMobile: data.ownerMobile || '',
+            ownerAddress: data.ownerAddress || '',        // PREFILL
             thresholdValue: data.thresholdValue ?? '',
             securityContact: data.securityContact || '',
             higherAuthority: data.higherAuthority || '',
@@ -284,6 +284,12 @@ export default function OwnerProfile() {
           <div className="field">
             <div className="label">Owner Mobile Number</div>
             <input className="input" name="ownerMobile" value={form.ownerMobile} onChange={onChange} required />
+          </div>
+
+          {/* NEW: Owner Address field */}
+          <div className="field">
+            <div className="label">Owner Address</div>
+            <input className="input" name="ownerAddress" value={form.ownerAddress} onChange={onChange} required />
           </div>
 
           <div className="field">
