@@ -4,21 +4,21 @@ import { useNavigate } from 'react-router-dom';
 export default function Signup(){
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [pin, setPin] = useState('');
   const navigate = useNavigate();
   const API = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
   async function submit(e){
     e.preventDefault();
     const res = await fetch(`${API}/api/auth/signup`, {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ email, password, pin })
+      body: JSON.stringify({ email, password })
     });
     const data = await res.json();
+
     if (res.ok) {
-      localStorage.setItem('token', data.token);
       alert('Signup successful');
-      navigate('/');
+      navigate('/login');
     } else {
       alert(data.message || 'Signup failed');
     }
@@ -35,10 +35,6 @@ export default function Signup(){
         <div>
           <label>Password</label><br/>
           <input type="password" value={password} onChange={e=>setPassword(e.target.value)} required/>
-        </div>
-        <div>
-          <label>Secret Pin</label><br/>
-          <input value={pin} onChange={e=>setPin(e.target.value)} required/>
         </div>
         <button type="submit">Signup</button>
       </form>
