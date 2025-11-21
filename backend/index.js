@@ -14,10 +14,15 @@ app.use(express.json());
 
 // CORS - tighten in production by setting ALLOWED_ORIGIN to your Netlify URL
 const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || '*';
-app.use(cors({ origin: ALLOWED_ORIGIN }));
+// Allow credentials so frontend can send cookies or Authorization headers safely
+app.use(cors({ origin: ALLOWED_ORIGIN, credentials: true }));
 
 // Routes
 app.use('/api/auth', authRoutes);
+
+// NEW: owner routes
+const ownerRouter = require('./routes/owner');
+app.use('/api/owner', ownerRouter);
 
 // Simple health endpoint
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
