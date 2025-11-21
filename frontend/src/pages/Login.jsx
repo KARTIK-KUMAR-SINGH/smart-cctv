@@ -1,3 +1,4 @@
+// frontend/src/pages/Login.jsx
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
@@ -10,20 +11,55 @@ export default function Login(){
 
   async function submit(e){
     e.preventDefault();
-    const res = await fetch(`${API}/api/auth/login`, {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ email, password, pin })
-    });
 
-    const data = await res.json();
+    try {
+      const res = await fetch(`${API}/api/auth/login`, {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ email, password, pin })
+      });
 
-    if (res.ok) {
+      const data = await res.json();
+
+      if (!res.ok) {
+        alert(data.message || 'Login failed');
+        return;
+      }
+
+      // save token
       localStorage.setItem('token', data.token);
-      alert('Login successful');
-      navigate('/');
-    } else {
-      alert(data.message || 'Login failed');
+
+      // Immediately check owner profile and redirect accordingly
+      try {
+        const profileRes = await fetch(`${API}/api/owner/me`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + data.token
+          }
+        });
+
+        if (profileRes.ok) {
+          // profile exists -> go to home/dashboard
+          navigate('/');
+        } else {
+          // if 404 (not found) or other client error -> force profile fill
+          if (profileRes.status === 404) {
+            navigate('/owner-profile');
+          } else {
+            // any unexpected status: still try to go to home to avoid lockout
+            navigate('/');
+          }
+        }
+      } catch (err) {
+        // network error when checking profile: fallback to home
+        console.error('Profile check failed:', err);
+        navigate('/');
+      }
+
+    } catch (err) {
+      console.error('Login error:', err);
+      alert('Login failed: ' + (err.message || 'unknown error'));
     }
   }
 

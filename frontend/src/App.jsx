@@ -4,7 +4,7 @@ import Header from './components/Header';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
-import OwnerForm from "./components/OwnerForm";
+import OwnerProfile from './pages/OwnerProfile';
 
 
 export default function App(){
@@ -16,7 +16,7 @@ export default function App(){
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
-           <Route path="/owner-form" element={<OwnerForm />} />
+           <Route path="/owner-profile" element={<OwnerProfile />} />
         </Routes>
       </main>
     </div>
