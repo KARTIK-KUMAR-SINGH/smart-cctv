@@ -1,0 +1,141 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Camera Control</title>
+  <style>
+    body{font-family:Arial;padding:20px;background:#f6f8fb}
+    .card{max-width:720px;margin:0 auto;background:#fff;padding:18px;border-radius:10px;box-shadow:0 6px 18px rgba(0,0,0,0.06)}
+    h2{margin-top:0}
+    .row{display:flex;gap:12px;align-items:center;margin-top:12px}
+    .btn{padding:10px 14px;border-radius:8px;border:none;background:#007bff;color:white;cursor:pointer}
+    input[type=range]{width:100%}
+    .small{color:#666;font-size:13px}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>Camera / Servo Control</h2>
+    <p class="small">Signal pin should be connected to <strong>GPIO18 (physical pin 12)</strong>. 5V and GND must be connected properly.</p>
+
+    <div style="margin-top:14px;">
+      <label>Angle (0–180)</label>
+      <div class="row">
+        <input id="angleSlider" type="range" min="0" max="180" value="90">
+        <div style="width:80px;text-align:center"><span id="angleVal">90</span>°</div>
+      </div>
+      <div class="row" style="margin-top:8px">
+        <button class="btn" id="angleSet">Set Angle</button>
+        <button class="btn" id="angleLeft">◀ Left 10°</button>
+        <button class="btn" id="angleRight">Right 10° ▶</button>
+        <button class="btn" id="angleStop">Stop</button>
+      </div>
+    </div>
+
+    <hr style="margin:16px 0">
+
+    <div>
+      <label>Continuous servo speed (-100..100)</label>
+      <div class="row">
+        <input id="speedSlider" type="range" min="-100" max="100" value="0">
+        <div style="width:80px;text-align:center"><span id="speedVal">0</span></div>
+      </div>
+      <div class="row" style="margin-top:8px">
+        <button class="btn" id="speedSet">Set Speed</button>
+        <button class="btn" id="speedStop">Stop</button>
+      </div>
+    </div>
+
+    <hr style="margin:16px 0">
+
+    <div>
+      <div>Current state: <span id="state">unknown</span></div>
+      <div class="small" style="margin-top:8px">Use <a href="/index.html">Back</a> to return</div>
+    </div>
+  </div>
+
+  <script>
+    const PI = 'http://10.199.77.48:5000';
+
+    const angleSlider = document.getElementById('angleSlider');
+    const angleVal = document.getElementById('angleVal');
+    const angleSet = document.getElementById('angleSet');
+    const angleLeft = document.getElementById('angleLeft');
+    const angleRight = document.getElementById('angleRight');
+    const angleStop = document.getElementById('angleStop');
+
+    const speedSlider = document.getElementById('speedSlider');
+    const speedVal = document.getElementById('speedVal');
+    const speedSet = document.getElementById('speedSet');
+    const speedStop = document.getElementById('speedStop');
+
+    const stateEl = document.getElementById('state');
+
+    angleSlider.oninput = () => angleVal.textContent = angleSlider.value;
+    speedSlider.oninput = () => speedVal.textContent = speedSlider.value;
+
+    async function postJson(path, body) {
+      const res = await fetch(PI + path, {
+        method:'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify(body)
+      });
+      return res.json();
+    }
+
+    angleSet.onclick = async () => {
+      const a = parseInt(angleSlider.value);
+      try {
+        const r = await postJson('/servo/angle', {angle: a});
+        console.log(r);
+        refreshState();
+      } catch (e) { alert('Error: ' + e); }
+    };
+
+    angleLeft.onclick = async () => {
+      let a = Math.max(0, parseInt(angleSlider.value) - 10);
+      angleSlider.value = a; angleVal.textContent = a;
+      angleSet.click();
+    };
+
+    angleRight.onclick = async () => {
+      let a = Math.min(180, parseInt(angleSlider.value) + 10);
+      angleSlider.value = a; angleVal.textContent = a;
+      angleSet.click();
+    };
+
+    angleStop.onclick = async () => {
+      await postJson('/servo/stop', {});
+      refreshState();
+    };
+
+    speedSet.onclick = async () => {
+      const s = parseInt(speedSlider.value);
+      try {
+        const r = await postJson('/servo/speed', {speed: s});
+        console.log(r);
+        refreshState();
+      } catch (e) { alert('Error: ' + e); }
+    };
+
+    speedStop.onclick = async () => {
+      await postJson('/servo/stop', {});
+      refreshState();
+    };
+
+    async function refreshState(){
+      try {
+        const res = await fetch(PI + '/servo/state');
+        const j = await res.json();
+        stateEl.textContent = JSON.stringify(j);
+      } catch (e) {
+        stateEl.textContent = 'error';
+      }
+    }
+
+    // refresh periodically
+    setInterval(refreshState, 1500);
+    refreshState();
+  </script>
+</body>
+</html>
