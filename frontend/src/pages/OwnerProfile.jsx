@@ -90,23 +90,29 @@ export default function OwnerProfile() {
           --text: #eaf6ff;
         }
 
+        /* Ensure the root fully spans the page and centers the card */
         .owner-root{
-          min-height: 100%;
+          width: 100%;
+          box-sizing: border-box;
+          min-height: 100vh;
           display: flex;
-          align-items: center;
-          justify-content: center;
-          padding: 40px 18px;
+          align-items: flex-start;   /* keep top space below navbar/header */
+          justify-content: center;   /* center horizontally */
+          padding: 40px 24px;
           background:
             radial-gradient(600px 300px at 10% 10%, rgba(0,209,255,0.04), transparent),
             radial-gradient(700px 320px at 90% 90%, rgba(45,212,191,0.02), transparent),
             linear-gradient(180deg, #041021 0%, var(--bg) 100%);
           font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
           color: var(--text);
+          margin: 0;
         }
 
+        /* Center the card and allow it to grow on large screens */
         .owner-card {
           width: 100%;
-          max-width: 720px;
+          max-width: 920px;       /* wider to avoid tiny left-only card on big screens */
+          margin: 40px auto;      /* centers card in all contexts */
           border-radius: 16px;
           padding: 28px;
           background: var(--panel);
@@ -211,6 +217,7 @@ export default function OwnerProfile() {
           display:flex;
           gap:12px;
           align-items:center;
+          justify-content: space-between;
         }
 
         .note {
