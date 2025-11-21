@@ -14,6 +14,10 @@ router.post('/', auth, async (req, res) => {
       user: userId,
       ownerName: req.body.ownerName,
       ownerMobile: req.body.ownerMobile,
+
+      // ⭐ NEW FIELD
+      ownerAddress: req.body.ownerAddress,
+
       thresholdValue: req.body.thresholdValue,
       securityContact: req.body.securityContact,
       higherAuthority: req.body.higherAuthority,
