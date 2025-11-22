@@ -66,26 +66,29 @@
 
     const openBtn = document.getElementById('openBtn');
     const openNewBtn = document.getElementById('openNewBtn');
-    const cameraCtrlBtn = document.getElementById('cameraCtrlBtn'); // new button
+    const cameraCtrlBtn = document.getElementById('cameraCtrlBtn');
     const connStatus = document.getElementById('connStatus');
     const liveArea = document.getElementById('liveArea');
     const peopleCountEl = document.getElementById('peopleCount');
     const lastTimeEl = document.getElementById('lastTime');
     const logEl = document.getElementById('log');
 
+    // Live feed button
     openBtn.addEventListener('click', () => { window.location.href = PI_WS + '/stream'; });
     openNewBtn.addEventListener('click', () => { window.open(PI_WS + '/stream', '_blank'); });
-    // UPDATED: open backend root (your server_lgpio.py / backend index.html) in a new tab
-    cameraCtrlBtn.addEventListener('click', () => { window.open(PI_WS + '/', '_blank'); });
+
+    // ⭐ UPDATED: Camera Control button → redirect to NEW IP
+    cameraCtrlBtn.addEventListener('click', () => { 
+      window.location.href = "http://10.199.77.48:5001"; 
+    });
 
     function log(msg) {
       const time = new Date().toLocaleTimeString();
       logEl.textContent = `${time} — ${msg}\n` + logEl.textContent;
-      // keep log size manageable
       if (logEl.textContent.length > 8000) logEl.textContent = logEl.textContent.slice(0,8000);
     }
 
-    // Socket connection with clear logging
+    // Socket connection
     let socket;
     try {
       socket = io(PI_WS, { transports: ['websocket'], reconnectionAttempts: 3 });
@@ -104,7 +107,6 @@
       socket.on('disconnect', () => {
         connStatus.innerHTML = 'Socket: <strong style="color:#c33">disconnected</strong>';
         log('socket disconnected');
-        // start polling fallback if disconnect happens
         startPolling();
       });
 
@@ -116,18 +118,14 @@
 
       socket.on('frame', (data) => {
         log('frame event: ' + JSON.stringify({count: data && data.count, timestamp: data && data.timestamp}).slice(0,200));
-        // update UI from server count if present
         if (data && typeof data.count === 'number') {
           peopleCountEl.textContent = data.count;
         } else if (data && data.detections) {
-          // fallback: number of detections sent
           peopleCountEl.textContent = data.detections.length;
         }
-        // prefer server timestamp if present
         if (data && data.timestamp) {
           lastTimeEl.textContent = data.timestamp;
         } else {
-          // if server didn't send timestamp, use client time
           lastTimeEl.textContent = new Date().toISOString().replace('T',' ').split('.')[0];
         }
         liveArea.style.display = 'flex';
@@ -143,7 +141,6 @@
       });
     }
 
-    // Polling fallback
     let pollTimer = null;
     async function fetchCountOnce() {
       try {
@@ -155,18 +152,17 @@
         if (j && j.timestamp) lastTimeEl.textContent = j.timestamp;
         liveArea.style.display = 'flex';
       } catch (e) {
-        log('/count fetch error: ' + (e && e.message ? e.message : e));
+        log('/count fetch error: ' + e.message);
       }
     }
+
     function startPolling() {
       if (pollTimer) return;
       log('starting polling fallback every 1s');
       pollTimer = setInterval(fetchCountOnce, 1000);
-      // run immediately once
-      fetchCountOnce();xxxxxx
+      fetchCountOnce();
     }
 
-    // if socket doesn't connect in 2s, start polling
     setTimeout(() => {
       if (!socket || (socket && !socket.connected)) startPolling();
     }, 2000);
