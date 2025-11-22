@@ -34,7 +34,7 @@
     </div>
     
     <div class="info">
-      <div style="margin-top:12px;">Stream URL: <b id="streamUrl">http://10.199.77.218/stream</b></div>
+      <div style="margin-top:12px;">Stream URL: <b id="streamUrl">http://10.199.77.48:5000/stream</b></div>
 
       <!-- Live count area -->
       <div id="liveArea" class="counter-box" style="display:none">
@@ -48,7 +48,7 @@
         </div>
       </div>
 
-      <div class="small" style="margin-top:10px">If the page shows "Socket: disconnected", refresh the page or check your Pi server at <code>http://10.199.77.218</code>.</div>
+      <div class="small" style="margin-top:10px">If the page shows "Socket: disconnected", refresh the page or check your Pi server at <code>http://10.199.77.48:5000</code>.</div>
 
       <div style="margin-top:14px;">
         <div style="font-weight:600;margin-bottom:6px;">Debug log (latest socket/frame messages)</div>
@@ -60,8 +60,8 @@
   <!-- Socket.IO client -->
   <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
   <script>
-    // change this only if your Pi IP is different
-    const PI_WS = 'http://10.199.77.218';
+    // change this only if your Pi IP or port changes
+    const PI_WS = 'http://10.199.77.48:5000';
     document.getElementById('streamUrl').textContent = PI_WS + '/stream';
 
     const openBtn = document.getElementById('openBtn');
@@ -73,14 +73,14 @@
     const lastTimeEl = document.getElementById('lastTime');
     const logEl = document.getElementById('log');
 
-    // Live feed button
+    // Live feed button: same tab
     openBtn.addEventListener('click', () => { window.location.href = PI_WS + '/stream'; });
+
+    // Open in new tab
     openNewBtn.addEventListener('click', () => { window.open(PI_WS + '/stream', '_blank'); });
 
-    // ⭐ UPDATED: Camera Control button → redirect to NEW IP
-    cameraCtrlBtn.addEventListener('click', () => { 
-      window.location.href = "http://10.199.77.48:5001"; 
-    });
+    // Camera control - keep existing behavior (open control UI served by your Pi root)
+    cameraCtrlBtn.addEventListener('click', () => { window.open(PI_WS + '/', '_blank'); });
 
     function log(msg) {
       const time = new Date().toLocaleTimeString();
@@ -93,7 +93,7 @@
     try {
       socket = io(PI_WS, { transports: ['websocket'], reconnectionAttempts: 3 });
     } catch (e) {
-      log('Socket init error: ' + e.message);
+      log('Socket init error: ' + (e && e.message ? e.message : e));
       startPolling();
     }
 
@@ -152,7 +152,7 @@
         if (j && j.timestamp) lastTimeEl.textContent = j.timestamp;
         liveArea.style.display = 'flex';
       } catch (e) {
-        log('/count fetch error: ' + e.message);
+        log('/count fetch error: ' + (e && e.message ? e.message : e));
       }
     }
 
@@ -160,7 +160,7 @@
       if (pollTimer) return;
       log('starting polling fallback every 1s');
       pollTimer = setInterval(fetchCountOnce, 1000);
-      fetchCountOnce();
+      fetchCountOnce(); 
     }
 
     setTimeout(() => {
@@ -169,3 +169,4 @@
   </script>
 </body>
 </html>
+<!-- hello -->
