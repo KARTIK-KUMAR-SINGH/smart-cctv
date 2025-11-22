@@ -66,7 +66,7 @@ export default function OwnerProfile() {
         alert('Failed to save');
       } else {
         // ⭐ Redirect after saving owner details
-        window.location.href = "http://10.199.77.218/external/";
+        window.location.href = "http://127.0.0.1:5500/smart-cctv2/index.html";
         return;
       }
     } catch {
