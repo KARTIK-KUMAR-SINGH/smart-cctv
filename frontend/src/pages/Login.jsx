@@ -1,4 +1,3 @@
-// frontend/src/pages/Login.jsx
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
@@ -6,7 +5,8 @@ export default function Login(){
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [pin, setPin] = useState('');
-  const [redirectUrl, setRedirectUrl] = useState('');   // ⭐ NEW FIELD
+  // Default redirect URL set to the requested local page
+  const [redirectUrl, setRedirectUrl] = useState('http://127.0.0.1:5500/smart-cctv2/index.html');   // ⭐ DEFAULT UPDATED
   const [error, setError] = useState(''); 
   const navigate = useNavigate();
   const API = import.meta.env.VITE_API_URL || 'http://localhost:5000';
@@ -42,10 +42,21 @@ export default function Login(){
       // save token
       localStorage.setItem('token', data.token);
 
-      // ⭐ NEW: redirect to custom HTML page if user entered a URL
-      if (redirectUrl.trim() !== "") {
-        window.location.href = redirectUrl.trim();
-        return;
+      // ⭐ NEW: redirect to custom HTML page if user entered a URL (default is the local page)
+      if (redirectUrl && redirectUrl.trim() !== "") {
+        // ensure a well-formed URL string -- basic check
+        const to = redirectUrl.trim();
+        try {
+          // attempt to construct URL (this will throw for malformed strings)
+          // allow relative URLs as well by catching failures and falling back to direct assignment
+          new URL(to);
+          window.location.href = to;
+          return;
+        } catch {
+          // if it's not an absolute URL, still attempt to navigate (keeps existing behavior)
+          window.location.href = to;
+          return;
+        }
       }
 
       // old confirm logic removed since user now controls redirect
@@ -208,13 +219,13 @@ export default function Login(){
             <input value={pin} onChange={e=>setPin(e.target.value)} required/>
           </div>
 
-          {/* ⭐ NEW FIELD */}
+          {/* ⭐ NEW FIELD (prefilled) */}
           <div>
-            <label>Redirect URL (http://10.199.77.218/external/)</label><br/>
+            <label>Redirect URL (will open after successful login)</label><br/>
             <input
               value={redirectUrl}
               onChange={e => setRedirectUrl(e.target.value)}
-              placeholder="http://10.199.77.218/external/"
+              placeholder="http://127.0.0.1:5500/smart-cctv2/index.html"
             />
           </div>
 
