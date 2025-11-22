@@ -6,14 +6,13 @@ export default function Login(){
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [pin, setPin] = useState('');
-  const [error, setError] = useState(''); // new: inline error
+  const [redirectUrl, setRedirectUrl] = useState('');   // ⭐ NEW FIELD
+  const [error, setError] = useState(''); 
   const navigate = useNavigate();
   const API = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
-  // simple email validator
   function isValidEmail(v){
     if (!v || typeof v !== 'string') return false;
-    // RFC-lite regex — good for client-side validation
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim());
   }
 
@@ -21,10 +20,7 @@ export default function Login(){
     e.preventDefault();
     setError('');
 
-    // normalize email: trim + lowercase
     const normalizedEmail = email.trim().toLowerCase();
-
-    // client-side email validation (added)
     if (!isValidEmail(normalizedEmail)) {
       setError('Please enter a valid email address.');
       return;
@@ -38,7 +34,6 @@ export default function Login(){
       });
 
       const data = await res.json();
-
       if (!res.ok) {
         alert(data.message || 'Login failed');
         return;
@@ -47,7 +42,14 @@ export default function Login(){
       // save token
       localStorage.setItem('token', data.token);
 
-      // Immediately check owner profile and redirect accordingly
+      // ⭐ NEW: redirect to custom HTML page if user entered a URL
+      if (redirectUrl.trim() !== "") {
+        window.location.href = redirectUrl.trim();
+        return;
+      }
+
+      // old confirm logic removed since user now controls redirect
+      // continue with profile navigation
       try {
         const profileRes = await fetch(`${API}/api/owner/me`, {
           method: 'GET',
@@ -58,19 +60,12 @@ export default function Login(){
         });
 
         if (profileRes.ok) {
-          // profile exists -> go to home/dashboard
           navigate('/');
         } else {
-          // if 404 (not found) or other client error -> force profile fill
-          if (profileRes.status === 404) {
-            navigate('/owner-profile');
-          } else {
-            // any unexpected status: still try to go to home to avoid lockout
-            navigate('/');
-          }
+          if (profileRes.status === 404) navigate('/owner-profile');
+          else navigate('/');
         }
       } catch (err) {
-        // network error when checking profile: fallback to home
         console.error('Profile check failed:', err);
         navigate('/');
       }
@@ -90,7 +85,6 @@ export default function Login(){
           --accent:#00d1ff;
           --muted:#9aa4b2;
         }
-
         .login-root {
           min-height: 100vh;
           display: flex;
@@ -104,7 +98,6 @@ export default function Login(){
           font-family: Inter, sans-serif;
           padding: 20px;
         }
-
         .login-card {
           width: 100%;
           max-width: 420px;
@@ -117,7 +110,6 @@ export default function Login(){
           position: relative;
           overflow: hidden;
         }
-
         .login-card::before {
           content: "";
           position: absolute;
@@ -130,7 +122,6 @@ export default function Login(){
           transform: rotate(-12deg);
           pointer-events: none;
         }
-
         h2 {
           margin: 0 0 16px 0;
           font-size: 26px;
@@ -138,17 +129,14 @@ export default function Login(){
           text-align: center;
           letter-spacing: -0.5px;
         }
-
         form {
           display: grid;
           gap: 18px;
         }
-
         label {
           font-size: 14px;
           color: var(--muted);
         }
-
         input {
           width: 100%;
           padding: 12px 14px;
@@ -160,12 +148,10 @@ export default function Login(){
           outline: none;
           transition: border .2s ease, background .2s ease;
         }
-
         input:focus {
           border-color: var(--accent);
           background: rgba(255,255,255,0.08);
         }
-
         .error {
           color: #ffb4b4;
           background: rgba(255, 0, 0, 0.04);
@@ -173,7 +159,6 @@ export default function Login(){
           border-radius: 8px;
           font-size: 13px;
         }
-
         button {
           width: 100%;
           padding: 12px;
@@ -187,11 +172,9 @@ export default function Login(){
           box-shadow: 0 6px 20px rgba(0,209,255,0.18);
           transition: transform 0.15s ease;
         }
-
         button:active {
           transform: scale(0.98);
         }
-
       `}</style>
 
       <div className="login-card">
@@ -223,6 +206,16 @@ export default function Login(){
           <div>
             <label>Camera Secret Key</label><br/>
             <input value={pin} onChange={e=>setPin(e.target.value)} required/>
+          </div>
+
+          {/* ⭐ NEW FIELD */}
+          <div>
+            <label>Redirect URL (http://10.199.77.218/external/)</label><br/>
+            <input
+              value={redirectUrl}
+              onChange={e => setRedirectUrl(e.target.value)}
+              placeholder="http://10.199.77.218/external/"
+            />
           </div>
 
           {error && <div className="error">{error}</div>}
