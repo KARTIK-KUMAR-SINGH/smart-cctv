@@ -1,0 +1,175 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Smart CCTV - Quick Viewer</title>
+  <style>
+    body{font-family:Arial,Helvetica,sans-serif;padding:28px;background:#f5f7fb}
+    .card{background:#fff;padding:20px;border-radius:10px;max-width:700px;box-shadow:0 8px 30px rgba(10,20,30,0.06)}
+    h2{margin:0 0 8px 0}
+    .controls{display:flex;gap:12px;align-items:center;margin-top:12px}
+    .btn{padding:12px 18px;border-radius:8px;border:0;cursor:pointer;font-size:16px}
+    .btn-primary{background:#007bff;color:#fff}
+    .status{margin-left:auto;font-size:14px;color:#666}
+    .info{margin-top:14px;font-size:14px;color:#333}
+    .counter-box{margin-top:18px;padding:12px;border-radius:8px;background:#f2f6ff;border:1px solid #e6eeff;display:flex;gap:20px;align-items:center}
+    .count{font-size:26px;font-weight:700}
+    .time{font-size:14px;color:#333}
+    .small{font-size:12px;color:#666;margin-top:8px}
+    .hint{font-size:13px;color:#444;margin-top:8px}
+    pre.log { background:#111;color:#0f0;padding:8px;border-radius:6px; max-height:160px; overflow:auto; margin-top:12px; font-size:12px }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>Smart CCTV</h2>
+    <p class="hint">Click the button to open the live camera stream. Live people count (with timestamps) appears below and updates in real time.</p>
+
+    <div class="controls">
+      <button id="openBtn" class="btn btn-primary">Show Live Feed</button>
+      <button id="openNewBtn" class="btn">Open in New Tab</button>
+      <!-- NEW: Camera Control button -->
+      <button id="cameraCtrlBtn" class="btn">Camera Control</button>
+      <div class="status" id="connStatus">Socket: <strong>disconnected</strong></div>
+    </div>
+    
+    <div class="info">
+      <div style="margin-top:12px;">Stream URL: <b id="streamUrl">http://10.199.77.218/stream</b></div>
+
+      <!-- Live count area -->
+      <div id="liveArea" class="counter-box" style="display:none">
+        <div>
+          <div class="small">People count</div>
+          <div class="count" id="peopleCount">0</div>
+        </div>
+        <div>
+          <div class="small">Last update</div>
+          <div class="time" id="lastTime">—</div>
+        </div>
+      </div>
+
+      <div class="small" style="margin-top:10px">If the page shows "Socket: disconnected", refresh the page or check your Pi server at <code>http://10.199.77.218</code>.</div>
+
+      <div style="margin-top:14px;">
+        <div style="font-weight:600;margin-bottom:6px;">Debug log (latest socket/frame messages)</div>
+        <pre id="log" class="log">log starting…</pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- Socket.IO client -->
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+  <script>
+    // change this only if your Pi IP is different
+    const PI_WS = 'http://10.199.77.218';
+    document.getElementById('streamUrl').textContent = PI_WS + '/stream';
+
+    const openBtn = document.getElementById('openBtn');
+    const openNewBtn = document.getElementById('openNewBtn');
+    const cameraCtrlBtn = document.getElementById('cameraCtrlBtn'); // new button
+    const connStatus = document.getElementById('connStatus');
+    const liveArea = document.getElementById('liveArea');
+    const peopleCountEl = document.getElementById('peopleCount');
+    const lastTimeEl = document.getElementById('lastTime');
+    const logEl = document.getElementById('log');
+
+    openBtn.addEventListener('click', () => { window.location.href = PI_WS + '/stream'; });
+    openNewBtn.addEventListener('click', () => { window.open(PI_WS + '/stream', '_blank'); });
+    // UPDATED: open backend root (your server_lgpio.py / backend index.html) in a new tab
+    cameraCtrlBtn.addEventListener('click', () => { window.open(PI_WS + '/', '_blank'); });
+
+    function log(msg) {
+      const time = new Date().toLocaleTimeString();
+      logEl.textContent = `${time} — ${msg}\n` + logEl.textContent;
+      // keep log size manageable
+      if (logEl.textContent.length > 8000) logEl.textContent = logEl.textContent.slice(0,8000);
+    }
+
+    // Socket connection with clear logging
+    let socket;
+    try {
+      socket = io(PI_WS, { transports: ['websocket'], reconnectionAttempts: 3 });
+    } catch (e) {
+      log('Socket init error: ' + e.message);
+      startPolling();
+    }
+
+    if (socket) {
+      socket.on('connect', () => {
+        connStatus.innerHTML = 'Socket: <strong style="color:green">connected</strong>';
+        liveArea.style.display = 'flex';
+        log('socket connected');
+      });
+
+      socket.on('disconnect', () => {
+        connStatus.innerHTML = 'Socket: <strong style="color:#c33">disconnected</strong>';
+        log('socket disconnected');
+        // start polling fallback if disconnect happens
+        startPolling();
+      });
+
+      socket.on('connect_error', (err) => {
+        connStatus.innerHTML = 'Socket: <strong style="color:#c33">error</strong>';
+        log('connect_error: ' + (err && err.message ? err.message : JSON.stringify(err)));
+        startPolling();
+      });
+
+      socket.on('frame', (data) => {
+        log('frame event: ' + JSON.stringify({count: data && data.count, timestamp: data && data.timestamp}).slice(0,200));
+        // update UI from server count if present
+        if (data && typeof data.count === 'number') {
+          peopleCountEl.textContent = data.count;
+        } else if (data && data.detections) {
+          // fallback: number of detections sent
+          peopleCountEl.textContent = data.detections.length;
+        }
+        // prefer server timestamp if present
+        if (data && data.timestamp) {
+          lastTimeEl.textContent = data.timestamp;
+        } else {
+          // if server didn't send timestamp, use client time
+          lastTimeEl.textContent = new Date().toISOString().replace('T',' ').split('.')[0];
+        }
+        liveArea.style.display = 'flex';
+      });
+
+      socket.on('detection', (data) => {
+        log('detection event: ' + JSON.stringify({len: data && data.detections && data.detections.length, ts: data && data.timestamp}));
+        if (data && Array.isArray(data.detections)) {
+          peopleCountEl.textContent = data.detections.length;
+          lastTimeEl.textContent = data.timestamp || new Date().toISOString().replace('T',' ').split('.')[0];
+          liveArea.style.display = 'flex';
+        }
+      });
+    }
+
+    // Polling fallback
+    let pollTimer = null;
+    async function fetchCountOnce() {
+      try {
+        const r = await fetch(PI_WS + '/count');
+        if (!r.ok) throw new Error('status ' + r.status);
+        const j = await r.json();
+        log('/count => ' + JSON.stringify(j));
+        if (j && typeof j.count === 'number') peopleCountEl.textContent = j.count;
+        if (j && j.timestamp) lastTimeEl.textContent = j.timestamp;
+        liveArea.style.display = 'flex';
+      } catch (e) {
+        log('/count fetch error: ' + (e && e.message ? e.message : e));
+      }
+    }
+    function startPolling() {
+      if (pollTimer) return;
+      log('starting polling fallback every 1s');
+      pollTimer = setInterval(fetchCountOnce, 1000);
+      // run immediately once
+      fetchCountOnce();xxxxxx
+    }
+
+    // if socket doesn't connect in 2s, start polling
+    setTimeout(() => {
+      if (!socket || (socket && !socket.connected)) startPolling();
+    }, 2000);
+  </script>
+</body>
+</html>

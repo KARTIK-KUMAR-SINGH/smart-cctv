@@ -1,0 +1,88 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>Servo Angle Controller</title>
+  <style>
+    body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial; padding: 2rem; max-width: 640px; margin: auto; }
+    .card { border-radius: 8px; padding: 1.25rem; box-shadow: 0 6px 18px rgba(0,0,0,0.08); }
+    input[type="range"] { width:100%; }
+    .row { display:flex; gap:8px; margin-top:8px; align-items:center; }
+    button { padding:8px 12px; border-radius:6px; cursor:pointer; }
+    .value { width:56px; text-align:center; font-weight:600; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>Servo Angle Controller</h2>
+    <p>Slider sets 0–180°. Press STOP to remove PWM. Backend: POST /angle, POST /stop.</p>
+
+    <div>
+      <input id="angleSlider" type="range" min="0" max="180" value="90">
+      <div class="row">
+        <button id="minus10">-10°</button>
+        <button id="minus1">-1°</button>
+        <div class="value" id="angleValue">90°</div>
+        <button id="plus1">+1°</button>
+        <button id="plus10">+10°</button>
+        <button id="stopBtn" style="margin-left:auto;background:#ff6666">STOP</button>
+      </div>
+    </div>
+
+    <div style="margin-top:12px;">
+      <small id="status">Status: idle</small>
+    </div>
+  </div>
+
+<script>
+const slider = document.getElementById('angleSlider');
+const valueBox = document.getElementById('angleValue');
+const status = document.getElementById('status');
+
+function setStatus(s, ok=true){
+  status.textContent = 'Status: ' + s;
+  status.style.color = ok ? 'black' : 'crimson';
+}
+
+function sendAngle(angle){
+  setStatus('sending ' + angle + '°...');
+  fetch('/angle', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({angle: angle})
+  }).then(r => r.json()).then(j => {
+    if(j.ok) setStatus('servo set to ' + j.angle + '° (duty ' + j.duty + ')');
+    else setStatus('error: ' + (j.error||'unknown'), false);
+  }).catch(err => {
+    setStatus('network/error: ' + err, false);
+  });
+}
+
+function stopServo(){
+  setStatus('stopping...');
+  fetch('/stop', {method:'POST'}).then(r => r.json()).then(j => {
+    if(j.ok) setStatus('stopped');
+    else setStatus('error stopping', false);
+  }).catch(err => setStatus('network/error: ' + err, false));
+}
+
+slider.addEventListener('input', () => {
+  const a = slider.value;
+  valueBox.textContent = a + '°';
+});
+
+slider.addEventListener('change', () => {
+  sendAngle(slider.value);
+});
+
+document.getElementById('minus10').onclick = () => { slider.value = Math.max(0, slider.value - 10); slider.dispatchEvent(new Event('change')); valueBox.textContent = slider.value + '°'; }
+document.getElementById('plus10').onclick  = () => { slider.value = Math.min(180, slider.value - 0 + 10); slider.dispatchEvent(new Event('change')); valueBox.textContent = slider.value + '°'; }
+document.getElementById('minus1').onclick  = () => { slider.value = Math.max(0, slider.value - 1); slider.dispatchEvent(new Event('change')); valueBox.textContent = slider.value + '°'; }
+document.getElementById('plus1').onclick   = () => { slider.value = Math.min(180, slider.value - 0 + 1); slider.dispatchEvent(new Event('change')); valueBox.textContent = slider.value + '°'; }
+document.getElementById('stopBtn').onclick = () => stopServo();
+
+valueBox.textContent = slider.value + '°';
+setStatus('ready — move the slider and release (change event)');
+</script>
+</body>
+</html>
